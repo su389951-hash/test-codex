@@ -35,6 +35,9 @@
     .tips { font-size:13px; color:#475569; line-height:1.6; }
     .tool-cell { display:flex; gap:6px; justify-content:center; }
     .tool-cell button { height:30px; width:auto; padding:0 8px; }
+    th { resize: horizontal; overflow: auto; white-space: nowrap; }
+    td input[type="number"], td input[type="text"], td input[type="date"] { width: 100%; }
+    .ref-days { color:#64748b; font-size:12px; display:block; margin-top:2px; }
   </style>
 </head>
 <body>
@@ -103,9 +106,12 @@
   </div>
 
   <div class="card">
-    <table>
+    <table id="mainTable">
+      <colgroup>
+        <col style="width:70px" /><col style="width:220px" /><col style="width:270px" /><col style="width:190px" /><col style="width:140px" /><col style="width:140px" /><col style="width:90px" /><col style="width:120px" />
+      </colgroup>
       <thead>
-      <tr><th>序号</th><th>项目</th><th>起始点（说明/日期）</th><th>节点要求（天）</th><th>责任人</th><th>计划完成</th><th>状态灯</th><th>操作</th></tr>
+      <tr><th>序号</th><th>项目</th><th>起始点（说明/日期）</th><th>节点要求（天）<br/><small>参考值保留</small></th><th>责任人</th><th>计划完成</th><th>状态灯</th><th>操作</th></tr>
       </thead>
       <tbody id="nodeBody"></tbody>
     </table>
@@ -114,22 +120,22 @@
 
 <script>
   const defaultNodes = [
-    { item:'新品评审', startPoint:'接到信息', days:2, owner:'项目工程师' },
-    { item:'变更评审', startPoint:'接到信息', days:2, owner:'项目工程师' },
-    { item:'PLM任务创建', startPoint:'接到任务', days:1, owner:'王梦' },
-    { item:'新品报价', startPoint:'评审完成', days:2, owner:'项目工程师' },
-    { item:'技术通知', startPoint:'评审完成', days:2, owner:'项目工程师' },
-    { item:'建表讨论下发', startPoint:'接到开发通知', days:2, owner:'项目工程师' },
-    { item:'图纸转化', startPoint:'接到开发通知', days:3, owner:'项目工程师' },
-    { item:'模具鉴定', startPoint:'模具到厂', days:3, owner:'项目工程师' },
-    { item:'工艺下发', startPoint:'模具到厂', days:2, owner:'项目工程师' },
-    { item:'材料试验（物性）', startPoint:'接到任务', days:2, owner:'寿子启' },
-    { item:'产品试验', startPoint:'接到任务', days:1, owner:'张倩' },
-    { item:'BOM创建', startPoint:'接到任务', days:1, owner:'郭鑫' },
-    { item:'产品检验卡', startPoint:'接到开发通知', days:5, owner:'项目工程师' },
-    { item:'作业检验卡', startPoint:'接到开发通知', days:5, owner:'项目工程师' },
-    { item:'文件提交', startPoint:'接到任务', days:7, owner:'项目工程师' },
-    { item:'质量问题处理', startPoint:'接到任务', days:0.5, owner:'项目工程师' }
+    { item:'新品评审', startPoint:'接到信息', days:2, refDays:2, owner:'项目工程师' },
+    { item:'变更评审', startPoint:'接到信息', days:2, refDays:2, owner:'项目工程师' },
+    { item:'PLM任务创建', startPoint:'接到任务', days:1, refDays:1, owner:'王梦' },
+    { item:'新品报价', startPoint:'评审完成', days:2, refDays:2, owner:'项目工程师' },
+    { item:'技术通知', startPoint:'评审完成', days:2, refDays:2, owner:'项目工程师' },
+    { item:'建表讨论下发', startPoint:'接到开发通知', days:2, refDays:2, owner:'项目工程师' },
+    { item:'图纸转化', startPoint:'接到开发通知', days:3, refDays:3, owner:'项目工程师' },
+    { item:'模具鉴定', startPoint:'模具到厂', days:3, refDays:3, owner:'项目工程师' },
+    { item:'工艺下发', startPoint:'模具到厂', days:2, refDays:2, owner:'项目工程师' },
+    { item:'材料试验（物性）', startPoint:'接到任务', days:2, refDays:2, owner:'寿子启' },
+    { item:'产品试验', startPoint:'接到任务', days:1, refDays:1, owner:'张倩' },
+    { item:'BOM创建', startPoint:'接到任务', days:1, refDays:1, owner:'郭鑫' },
+    { item:'产品检验卡', startPoint:'接到开发通知', days:5, refDays:5, owner:'项目工程师' },
+    { item:'作业检验卡', startPoint:'接到开发通知', days:5, refDays:5, owner:'项目工程师' },
+    { item:'文件提交', startPoint:'接到任务', days:7, refDays:7, owner:'项目工程师' },
+    { item:'质量问题处理', startPoint:'接到任务', days:0.5, refDays:0.5, owner:'项目工程师' }
   ];
   const projectAdjust = { '新品开发': 1, '变更管理': 0.8 };
 
@@ -248,7 +254,7 @@
     nodeBody.innerHTML = '';
     let overdueCount = 0;
 
-    const nodes = currentNodes.map((n,i)=>({ no:i+1, ...n, days:+(n.days*factor).toFixed(1) }));
+    const nodes = currentNodes.map((n,i)=>({ no:i+1, ...n, refDays:n.refDays ?? n.days, days:+(n.days*factor).toFixed(1) }));
     nodes.forEach((n, i) => {
       const startStr = nodeStartDates[i] || startDateEl.value;
       const deadline = addDays(new Date(startStr + 'T09:00:00'), n.days);
@@ -259,7 +265,7 @@
       const lightClass = overdue ? 'warn' : (inProgress ? 'progress' : '');
       const lightTitle = overdue ? '已超期' : (inProgress ? '进行中（期限内）' : '未开始');
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td><input type="number" min="0" step="0.5" data-days-index="${i}" value="${currentNodes[i].days}" /></td><td>${n.owner}</td><td>${fmt(deadline)}</td><td><div class="light ${lightClass}" title="${lightTitle}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
+      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td><input type="number" min="0" step="0.5" data-days-index="${i}" value="${currentNodes[i].days}" /><span class="ref-days">参考：${n.refDays}天</span></td><td>${n.owner}</td><td>${fmt(deadline)}</td><td><div class="light ${lightClass}" title="${lightTitle}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
       nodeBody.appendChild(tr);
     });
 
@@ -343,7 +349,7 @@
     const startPoint = document.getElementById('newStartPoint').value.trim() || '接到任务';
     const days = Number(document.getElementById('newDays').value); if (Number.isNaN(days) || days < 0) return alert('节点天数无效');
     const owner = ownerSelectEl.value || '项目工程师';
-    const newNode = { item, startPoint, days, owner };
+    const newNode = { item, startPoint, days, refDays: days, owner };
     const pos = insertAfterEl.value;
     if (pos === 'end') { currentNodes.push(newNode); if (!nodeStartDates.length) nodeStartDates.push(startDateEl.value); else { const prev = currentNodes.length - 2; nodeStartDates.push(toDateInputValue(addDays(new Date((nodeStartDates[prev] || startDateEl.value) + 'T09:00:00'), Number(currentNodes[prev].days) || 0))); } }
     else { const idx = Number(pos); currentNodes.splice(idx+1,0,newNode); nodeStartDates.splice(idx+1,0,nodeStartDates[idx] || startDateEl.value); recalcStartDatesFrom(idx); }
