@@ -133,7 +133,7 @@
     { item:'产品试验', startPoint:'接到任务', days:1, refDays:1, owner:'张倩' },
     { item:'BOM创建', startPoint:'接到任务', days:1, refDays:1, owner:'郭鑫' },
     { item:'产品检验卡', startPoint:'接到开发通知', days:5, refDays:5, owner:'项目工程师' },
-    { item:'作业检验卡', startPoint:'接到开发通知', days:5, refDays:5, owner:'项目工程师' },
+    { item:'骨架检验卡', startPoint:'接到开发通知', days:5, refDays:5, owner:'项目工程师' },
     { item:'文件提交', startPoint:'接到任务', days:7, refDays:7, owner:'项目工程师' },
     { item:'质量问题处理', startPoint:'接到任务', days:0.5, refDays:0.5, owner:'项目工程师' }
   ];
@@ -153,6 +153,7 @@
   let currentNodes = [];
   let owners = [];
   let nodeStartDates = [];
+  let manualStartFlags = [];
   let lastGlobalStartDate = null;
   let currentPart = null;
 
@@ -185,7 +186,8 @@
       startDate: toDateInputValue(base),
       nodes,
       owners: [...new Set(nodes.map(n => n.owner))],
-      nodeStartDates: buildDefaultStartDates(base, nodes)
+      nodeStartDates: buildDefaultStartDates(base, nodes),
+      manualStartFlags: Array(nodes.length).fill(false)
     };
   }
 
@@ -198,6 +200,7 @@
     currentNodes = clone(data.nodes);
     owners = [...data.owners];
     nodeStartDates = [...data.nodeStartDates];
+    manualStartFlags = data.manualStartFlags ? [...data.manualStartFlags] : Array(currentNodes.length).fill(false);
     lastGlobalStartDate = new Date(data.startDate + 'T09:00:00');
     renderOwnerOptions(owners[0]);
     renderInsertOptions();
@@ -211,7 +214,8 @@
       startDate: startDateEl.value,
       nodes: clone(currentNodes),
       owners: [...owners],
-      nodeStartDates: [...nodeStartDates]
+      nodeStartDates: [...nodeStartDates],
+      manualStartFlags: [...manualStartFlags]
     };
   }
 
@@ -247,9 +251,13 @@
     const planIndex = currentNodes.findIndex(n => n.item === '进度计划下发');
     const planStart = planIndex >= 0 ? nodeStartDates[planIndex] : null;
     const moldArrivalDate = planStart ? toDateInputValue(addDays(new Date(planStart + 'T09:00:00'), 20)) : null;
+    const inspectDate = planStart ? toDateInputValue(addDays(new Date(planStart + 'T09:00:00'), 7)) : null;
 
     for (let i = Math.max(1, begin); i < currentNodes.length; i++) {
-      if (currentNodes[i].item === '工艺下发' && moldArrivalDate) {
+      if (manualStartFlags[i]) continue;
+      if ((currentNodes[i].item === '产品检验卡' || currentNodes[i].item === '骨架检验卡') && inspectDate) {
+        nodeStartDates[i] = inspectDate;
+      } else if (currentNodes[i].item === '工艺下发' && moldArrivalDate) {
         nodeStartDates[i] = toDateInputValue(addDays(new Date(moldArrivalDate + 'T09:00:00'), 5));
       } else if (currentNodes[i].startPoint === '模具到厂' && moldArrivalDate) {
         nodeStartDates[i] = moldArrivalDate;
@@ -261,7 +269,7 @@
     }
   }
 
-  function removeNode(index) { currentNodes.splice(index,1); nodeStartDates.splice(index,1); if (currentNodes.length && nodeStartDates.length) recalcStartDatesFrom(Math.max(0, index - 1)); renderInsertOptions(); render(); }
+  function removeNode(index) { currentNodes.splice(index,1); nodeStartDates.splice(index,1); manualStartFlags.splice(index,1); if (currentNodes.length && nodeStartDates.length) recalcStartDatesFrom(Math.max(0, index - 1)); renderInsertOptions(); render(); }
 
   function render() {
     const factor = projectAdjust[projectTypeEl.value] || 1;
@@ -372,8 +380,8 @@
     const owner = ownerSelectEl.value || '项目工程师';
     const newNode = { item, startPoint, days, refDays: days, owner };
     const pos = insertAfterEl.value;
-    if (pos === 'end') { currentNodes.push(newNode); if (!nodeStartDates.length) nodeStartDates.push(startDateEl.value); else { const prev = currentNodes.length - 2; nodeStartDates.push(toDateInputValue(addDays(new Date((nodeStartDates[prev] || startDateEl.value) + 'T09:00:00'), Number(currentNodes[prev].days) || 0))); } }
-    else { const idx = Number(pos); currentNodes.splice(idx+1,0,newNode); nodeStartDates.splice(idx+1,0,nodeStartDates[idx] || startDateEl.value); recalcStartDatesFrom(idx); }
+    if (pos === 'end') { currentNodes.push(newNode); manualStartFlags.push(false); if (!nodeStartDates.length) nodeStartDates.push(startDateEl.value); else { const prev = currentNodes.length - 2; nodeStartDates.push(toDateInputValue(addDays(new Date((nodeStartDates[prev] || startDateEl.value) + 'T09:00:00'), Number(currentNodes[prev].days) || 0))); } }
+    else { const idx = Number(pos); currentNodes.splice(idx+1,0,newNode); nodeStartDates.splice(idx+1,0,nodeStartDates[idx] || startDateEl.value); manualStartFlags.splice(idx+1,0,false); recalcStartDatesFrom(idx); }
     renderInsertOptions(); document.getElementById('newItem').value=''; render();
   });
 </script>
