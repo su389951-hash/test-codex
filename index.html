@@ -234,7 +234,7 @@
       const deadline = addDays(new Date(startStr + 'T09:00:00'), n.days);
       const overdue = now > deadline; if (overdue) overdueCount++;
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${n.no}</td><td class="left">${n.item}</td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td>≤${n.days}</td><td>${n.owner}</td><td>${fmt(deadline)}</td><td><div class="light ${overdue ? 'warn' : ''}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
+      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td>≤${n.days}</td><td>${n.owner}</td><td>${fmt(deadline)}</td><td><div class="light ${overdue ? 'warn' : ''}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
       nodeBody.appendChild(tr);
     });
 
@@ -243,6 +243,12 @@
 
     document.querySelectorAll('.tool-cell button').forEach(btn => btn.addEventListener('click', e => removeNode(Number(e.target.dataset.index))));
     document.querySelectorAll('input[data-start-index]').forEach(input => input.addEventListener('change', e => { nodeStartDates[Number(e.target.dataset.startIndex)] = e.target.value; render(); }));
+    document.querySelectorAll('input[data-item-index]').forEach(input => input.addEventListener('change', e => {
+      const idx = Number(e.target.dataset.itemIndex);
+      currentNodes[idx].item = e.target.value.trim() || currentNodes[idx].item;
+      renderInsertOptions();
+      render();
+    }));
   }
 
   startDateEl.value = toDateInputValue(new Date());
