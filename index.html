@@ -202,6 +202,7 @@
     nodeStartDates = [...data.nodeStartDates];
     manualStartFlags = data.manualStartFlags ? [...data.manualStartFlags] : Array(currentNodes.length).fill(false);
     lastGlobalStartDate = new Date(data.startDate + 'T09:00:00');
+    // 默认由程序自动计算预设起始点；后续用户可逐条手动修改
     recalcStartDatesFrom(0);
     renderOwnerOptions(owners[0]);
     renderInsertOptions();
@@ -241,6 +242,14 @@
     insertAfterEl.value = (selected === 'end' || currentNodes[selected]) ? selected : 'end';
   }
 
+
+  function applyAutoPresetStartDates() {
+    manualStartFlags = Array(currentNodes.length).fill(false);
+    if (currentNodes.length) {
+      nodeStartDates = Array(currentNodes.length).fill(startDateEl.value);
+      recalcStartDatesFrom(0);
+    }
+  }
 
   function recalcStartDatesFrom(startIdx) {
     if (!currentNodes.length) return;
