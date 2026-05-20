@@ -238,11 +238,24 @@
 
 
   function recalcStartDatesFrom(startIdx) {
-    if (!nodeStartDates.length) return;
-    for (let i = Math.max(0, startIdx); i < currentNodes.length - 1; i++) {
-      const curStart = nodeStartDates[i] || startDateEl.value;
-      const curDays = Number(currentNodes[i].days) || 0;
-      nodeStartDates[i + 1] = toDateInputValue(addDays(new Date(curStart + 'T09:00:00'), curDays));
+    if (!currentNodes.length) return;
+    if (!nodeStartDates.length) nodeStartDates = Array(currentNodes.length).fill(startDateEl.value);
+
+    const begin = Math.max(0, startIdx);
+    if (begin === 0) nodeStartDates[0] = nodeStartDates[0] || startDateEl.value;
+
+    const planIndex = currentNodes.findIndex(n => n.item === '进度计划下发');
+    const planStart = planIndex >= 0 ? nodeStartDates[planIndex] : null;
+    const moldArrivalDate = planStart ? toDateInputValue(addDays(new Date(planStart + 'T09:00:00'), 20)) : null;
+
+    for (let i = Math.max(1, begin); i < currentNodes.length; i++) {
+      if (currentNodes[i].startPoint === '模具到厂' && moldArrivalDate) {
+        nodeStartDates[i] = moldArrivalDate;
+      } else {
+        const prevStart = nodeStartDates[i - 1] || startDateEl.value;
+        const prevDays = Number(currentNodes[i - 1].days) || 0;
+        nodeStartDates[i] = toDateInputValue(addDays(new Date(prevStart + 'T09:00:00'), prevDays));
+      }
     }
   }
 
@@ -316,6 +329,7 @@
     if (!lastGlobalStartDate) { lastGlobalStartDate = newBase; render(); return; }
     const deltaMs = newBase.getTime() - lastGlobalStartDate.getTime();
     nodeStartDates = nodeStartDates.map(d => shiftDateValue(d, deltaMs));
+    recalcStartDatesFrom(0);
     lastGlobalStartDate = newBase;
     render();
   });
