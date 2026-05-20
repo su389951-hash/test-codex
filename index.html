@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>新品开发与变更管理程序</title>
   <style>
-    :root { --ok:#16a34a; --warn:#dc2626; --bg:#f6f8fb; --card:#fff; --text:#0f172a; --line:#d8dee8; }
+    :root { --ok:#16a34a; --inprogress:#f59e0b; --warn:#dc2626; --bg:#f6f8fb; --card:#fff; --text:#0f172a; --line:#d8dee8; }
     * { box-sizing: border-box; }
     body { margin:0; font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif; background:var(--bg); color:var(--text); }
     .container { max-width:1280px; margin:24px auto; padding:0 16px; }
@@ -26,6 +26,7 @@
     th { background:#f1f5f9; }
     td.left { text-align:left; }
     .light { width:14px; height:14px; border-radius:50%; margin:0 auto; background:var(--ok); box-shadow:0 0 0 3px rgba(22,163,74,.15); }
+    .light.progress { background:var(--inprogress); box-shadow:0 0 0 3px rgba(245,158,11,.25); }
     .light.warn { background:var(--warn); box-shadow:0 0 0 3px rgba(220,38,38,.2); }
     .summary { display:flex; gap:16px; flex-wrap:wrap; align-items:center; font-size:14px; }
     .pill { padding:6px 10px; border-radius:999px; font-weight:600; border:1px solid transparent; }
@@ -91,6 +92,15 @@
   </div>
 
   <div class="card"><div class="summary" id="summary"></div></div>
+
+  <div class="card tips">
+    <strong>亮灯说明：</strong>
+    <ul>
+      <li><span class="light" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>绿灯：未开始（当前日期早于节点起始日期）。</li>
+      <li><span class="light progress" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>黄灯：节点期限之内，正在进行中（当前日期在起始日期与计划完成日期之间）。</li>
+      <li><span class="light warn" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>红灯：已超期（当前日期晚于计划完成日期）。</li>
+    </ul>
+  </div>
 
   <div class="card">
     <table>
@@ -232,9 +242,14 @@
     nodes.forEach((n, i) => {
       const startStr = nodeStartDates[i] || startDateEl.value;
       const deadline = addDays(new Date(startStr + 'T09:00:00'), n.days);
-      const overdue = now > deadline; if (overdue) overdueCount++;
+      const rowStart = new Date(startStr + 'T09:00:00');
+      const overdue = now > deadline;
+      const inProgress = now >= rowStart && now <= deadline;
+      if (overdue) overdueCount++;
+      const lightClass = overdue ? 'warn' : (inProgress ? 'progress' : '');
+      const lightTitle = overdue ? '已超期' : (inProgress ? '进行中（期限内）' : '未开始');
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td>≤${n.days}</td><td>${n.owner}</td><td>${fmt(deadline)}</td><td><div class="light ${overdue ? 'warn' : ''}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
+      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td>≤${n.days}</td><td>${n.owner}</td><td>${fmt(deadline)}</td><td><div class="light ${lightClass}" title="${lightTitle}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
       nodeBody.appendChild(tr);
     });
 
