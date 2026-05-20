@@ -306,7 +306,7 @@
     summary.innerHTML = `<span class="pill ${allOk?'ok':'warn'}">${projectTypeEl.value}：${allOk?'全部节点正常':`存在 ${overdueCount} 个超期节点`}</span><span>零件号：${partSelectEl.value}</span><span>开始日期：${fmt(new Date(startDateEl.value+'T09:00:00'))}</span><span>当前日期：${fmt(now)}</span><span>节点总数：${nodes.length}</span>`;
 
     document.querySelectorAll('.tool-cell button').forEach(btn => btn.addEventListener('click', e => removeNode(Number(e.target.dataset.index))));
-    document.querySelectorAll('input[data-start-index]').forEach(input => input.addEventListener('change', e => { const idx = Number(e.target.dataset.startIndex); nodeStartDates[idx] = e.target.value; recalcStartDatesFrom(idx); render(); }));
+    document.querySelectorAll('input[data-start-index]').forEach(input => input.addEventListener('change', e => { const idx = Number(e.target.dataset.startIndex); nodeStartDates[idx] = e.target.value; manualStartFlags[idx] = true; recalcStartDatesFrom(idx); render(); }));
     document.querySelectorAll('input[data-item-index]').forEach(input => input.addEventListener('change', e => {
       const idx = Number(e.target.dataset.itemIndex);
       currentNodes[idx].item = e.target.value.trim() || currentNodes[idx].item;
