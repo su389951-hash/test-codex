@@ -106,7 +106,20 @@
   const defaultNodes = [
     { item:'新品评审', startPoint:'接到信息', days:2, owner:'项目工程师' },
     { item:'变更评审', startPoint:'接到信息', days:2, owner:'项目工程师' },
-    { item:'PLM任务创建', startPoint:'接到任务', days:1, owner:'王梦' }
+    { item:'PLM任务创建', startPoint:'接到任务', days:1, owner:'王梦' },
+    { item:'新品报价', startPoint:'评审完成', days:2, owner:'项目工程师' },
+    { item:'技术通知', startPoint:'评审完成', days:2, owner:'项目工程师' },
+    { item:'建表讨论下发', startPoint:'接到开发通知', days:2, owner:'项目工程师' },
+    { item:'图纸转化', startPoint:'接到开发通知', days:3, owner:'项目工程师' },
+    { item:'模具鉴定', startPoint:'模具到厂', days:3, owner:'项目工程师' },
+    { item:'工艺下发', startPoint:'模具到厂', days:2, owner:'项目工程师' },
+    { item:'材料试验（物性）', startPoint:'接到任务', days:2, owner:'寿子启' },
+    { item:'产品试验', startPoint:'接到任务', days:1, owner:'张倩' },
+    { item:'BOM创建', startPoint:'接到任务', days:1, owner:'郭鑫' },
+    { item:'产品检验卡', startPoint:'接到开发通知', days:5, owner:'项目工程师' },
+    { item:'作业检验卡', startPoint:'接到开发通知', days:5, owner:'项目工程师' },
+    { item:'文件提交', startPoint:'接到任务', days:7, owner:'项目工程师' },
+    { item:'质量问题处理', startPoint:'接到任务', days:0.5, owner:'项目工程师' }
   ];
   const projectAdjust = { '新品开发': 1, '变更管理': 0.8 };
 
