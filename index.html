@@ -230,7 +230,17 @@
     insertAfterEl.value = (selected === 'end' || currentNodes[selected]) ? selected : 'end';
   }
 
-  function removeNode(index) { currentNodes.splice(index,1); nodeStartDates.splice(index,1); renderInsertOptions(); render(); }
+
+  function recalcStartDatesFrom(startIdx) {
+    if (!nodeStartDates.length) return;
+    for (let i = Math.max(0, startIdx); i < currentNodes.length - 1; i++) {
+      const curStart = nodeStartDates[i] || startDateEl.value;
+      const curDays = Number(currentNodes[i].days) || 0;
+      nodeStartDates[i + 1] = toDateInputValue(addDays(new Date(curStart + 'T09:00:00'), curDays));
+    }
+  }
+
+  function removeNode(index) { currentNodes.splice(index,1); nodeStartDates.splice(index,1); if (currentNodes.length && nodeStartDates.length) recalcStartDatesFrom(Math.max(0, index - 1)); renderInsertOptions(); render(); }
 
   function render() {
     const factor = projectAdjust[projectTypeEl.value] || 1;
@@ -257,7 +267,7 @@
     summary.innerHTML = `<span class="pill ${allOk?'ok':'warn'}">${projectTypeEl.value}：${allOk?'全部节点正常':`存在 ${overdueCount} 个超期节点`}</span><span>零件号：${partSelectEl.value}</span><span>开始日期：${fmt(new Date(startDateEl.value+'T09:00:00'))}</span><span>当前日期：${fmt(now)}</span><span>节点总数：${nodes.length}</span>`;
 
     document.querySelectorAll('.tool-cell button').forEach(btn => btn.addEventListener('click', e => removeNode(Number(e.target.dataset.index))));
-    document.querySelectorAll('input[data-start-index]').forEach(input => input.addEventListener('change', e => { nodeStartDates[Number(e.target.dataset.startIndex)] = e.target.value; render(); }));
+    document.querySelectorAll('input[data-start-index]').forEach(input => input.addEventListener('change', e => { const idx = Number(e.target.dataset.startIndex); nodeStartDates[idx] = e.target.value; recalcStartDatesFrom(idx); render(); }));
     document.querySelectorAll('input[data-item-index]').forEach(input => input.addEventListener('change', e => {
       const idx = Number(e.target.dataset.itemIndex);
       currentNodes[idx].item = e.target.value.trim() || currentNodes[idx].item;
@@ -273,6 +283,7 @@
         return;
       }
       currentNodes[idx].days = val;
+      recalcStartDatesFrom(idx);
       render();
     }));
   }
@@ -334,8 +345,8 @@
     const owner = ownerSelectEl.value || '项目工程师';
     const newNode = { item, startPoint, days, owner };
     const pos = insertAfterEl.value;
-    if (pos === 'end') { currentNodes.push(newNode); nodeStartDates.push(startDateEl.value); }
-    else { const idx = Number(pos); currentNodes.splice(idx+1,0,newNode); nodeStartDates.splice(idx+1,0,startDateEl.value); }
+    if (pos === 'end') { currentNodes.push(newNode); if (!nodeStartDates.length) nodeStartDates.push(startDateEl.value); else { const prev = currentNodes.length - 2; nodeStartDates.push(toDateInputValue(addDays(new Date((nodeStartDates[prev] || startDateEl.value) + 'T09:00:00'), Number(currentNodes[prev].days) || 0))); } }
+    else { const idx = Number(pos); currentNodes.splice(idx+1,0,newNode); nodeStartDates.splice(idx+1,0,nodeStartDates[idx] || startDateEl.value); recalcStartDatesFrom(idx); }
     renderInsertOptions(); document.getElementById('newItem').value=''; render();
   });
 </script>
