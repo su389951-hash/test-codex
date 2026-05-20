@@ -72,6 +72,7 @@
         <div class="inline-row">
           <button id="refreshBtn">刷新超期状态</button>
           <button id="saveBtn" class="save" type="button">保存当前零件</button>
+          <button id="resetPresetBtn" type="button">恢复起始点预设</button>
         </div>
       </div>
     </div>
@@ -341,6 +342,11 @@
   document.getElementById('saveBtn').addEventListener('click', () => {
     saveCurrentPartState(currentPart);
     alert(`零件号 ${currentPart} 数据已独立保存`);
+  });
+  document.getElementById('resetPresetBtn').addEventListener('click', () => {
+    applyAutoPresetStartDates();
+    render();
+    alert('已恢复该零件所有起始点为程序预设时间');
   });
 
   projectTypeEl.addEventListener('change', render);
