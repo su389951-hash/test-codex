@@ -265,7 +265,7 @@
       const lightClass = overdue ? 'warn' : (inProgress ? 'progress' : '');
       const lightTitle = overdue ? '已超期' : (inProgress ? '进行中（期限内）' : '未开始');
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td><input type="number" min="0" step="0.5" data-days-index="${i}" value="${currentNodes[i].days}" /><span class="ref-days">参考：${n.refDays}天</span></td><td>${n.owner}</td><td>${fmt(deadline)}</td><td><div class="light ${lightClass}" title="${lightTitle}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
+      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td><input type="number" min="0" step="0.5" data-days-index="${i}" value="${currentNodes[i].days}" /><span class="ref-days">参考：${n.refDays}天</span></td><td><select data-owner-index="${i}">${owners.map(o => `<option value="${o}" ${o===n.owner?"selected":""}>${o}</option>`).join("")}</select></td><td>${fmt(deadline)}</td><td><div class="light ${lightClass}" title="${lightTitle}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
       nodeBody.appendChild(tr);
     });
 
@@ -290,6 +290,11 @@
       }
       currentNodes[idx].days = val;
       recalcStartDatesFrom(idx);
+      render();
+    }));
+    document.querySelectorAll('select[data-owner-index]').forEach(sel => sel.addEventListener('change', e => {
+      const idx = Number(e.target.dataset.ownerIndex);
+      currentNodes[idx].owner = e.target.value;
       render();
     }));
   }
