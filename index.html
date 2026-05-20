@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>新品开发与变更管理程序</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2a37;
+      --muted: #5b6472;
+      --border: #d9e0eb;
+      --primary: #2563eb;
+      --danger: #dc2626;
+      --ok: #16a34a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 16px rgba(31, 42, 55, 0.06);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+    }
+
+    .desc {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input, select, button {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+
+    button {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .table-wrap {
+      margin-top: 20px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #3a4453;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .light {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      background: #9ca3af;
+      box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.2);
+    }
+
+    .light.ok {
+      background: var(--ok);
+      box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+    }
+
+    .light.warn {
+      background: var(--danger);
+      box-shadow: 0 0 8px 2px rgba(220, 38, 38, 0.35);
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .hint {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>新品开发和变更管理程序</h1>
+    <p class="desc">支持“新品开发 / 变更”下拉选择，并根据计划日期自动判断是否超期，超期红灯闪烁警示。</p>
+
+    <section class="grid">
+      <div class="field">
+        <label for="name">事项名称</label>
+        <input id="name" placeholder="例如：A产品立项 / 配方变更" />
+      </div>
+      <div class="field">
+        <label for="type">项目类型（下拉）</label>
+        <select id="type">
+          <option value="新品开发">新品开发</option>
+          <option value="变更">变更</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="owner">负责人</label>
+        <input id="owner" placeholder="请输入负责人" />
+      </div>
+      <div class="field">
+        <label for="dueDate">计划完成日期</label>
+        <input id="dueDate" type="date" />
+      </div>
+    </section>
+
+    <button id="addBtn">新增事项</button>
+
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>事项名称</th>
+            <th>项目类型</th>
+            <th>负责人</th>
+            <th>计划完成日期</th>
+            <th>状态灯</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="hint">状态灯规则：未超期=绿灯；超期=红灯闪烁警示。</p>
+    </section>
+  </main>
+
+  <script>
+    const rows = document.getElementById('rows');
+    const dueDateEl = document.getElementById('dueDate');
+    dueDateEl.value = new Date().toISOString().slice(0, 10);
+
+    function isOverdue(dateString) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const due = new Date(dateString + 'T00:00:00');
+      return due < today;
+    }
+
+    function addItem() {
+      const name = document.getElementById('name').value.trim() || '未命名事项';
+      const type = document.getElementById('type').value;
+      const owner = document.getElementById('owner').value.trim() || '未指定';
+      const dueDate = dueDateEl.value;
+
+      if (!dueDate) {
+        alert('请选择计划完成日期');
+        return;
+      }
+
+      const overdue = isOverdue(dueDate);
+      const statusText = overdue ? '超期' : '正常';
+      const lightClass = overdue ? 'warn' : 'ok';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${name}</td>
+        <td>${type}</td>
+        <td>${owner}</td>
+        <td>${dueDate}</td>
+        <td>
+          <span class="status">
+            <span class="light ${lightClass}"></span>${statusText}
+          </span>
+        </td>
+      `;
+      rows.prepend(tr);
+    }
+
+    document.getElementById('addBtn').addEventListener('click', addItem);
+  </script>
+</body>
+</html>
