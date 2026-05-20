@@ -249,7 +249,9 @@
     const moldArrivalDate = planStart ? toDateInputValue(addDays(new Date(planStart + 'T09:00:00'), 20)) : null;
 
     for (let i = Math.max(1, begin); i < currentNodes.length; i++) {
-      if (currentNodes[i].startPoint === '模具到厂' && moldArrivalDate) {
+      if (currentNodes[i].item === '工艺下发' && moldArrivalDate) {
+        nodeStartDates[i] = toDateInputValue(addDays(new Date(moldArrivalDate + 'T09:00:00'), 5));
+      } else if (currentNodes[i].startPoint === '模具到厂' && moldArrivalDate) {
         nodeStartDates[i] = moldArrivalDate;
       } else {
         const prevStart = nodeStartDates[i - 1] || startDateEl.value;
