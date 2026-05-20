@@ -249,7 +249,7 @@
       const lightClass = overdue ? 'warn' : (inProgress ? 'progress' : '');
       const lightTitle = overdue ? '已超期' : (inProgress ? '进行中（期限内）' : '未开始');
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td>≤${n.days}</td><td>${n.owner}</td><td>${fmt(deadline)}</td><td><div class="light ${lightClass}" title="${lightTitle}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
+      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td><input type="number" min="0" step="0.5" data-days-index="${i}" value="${currentNodes[i].days}" /></td><td>${n.owner}</td><td>${fmt(deadline)}</td><td><div class="light ${lightClass}" title="${lightTitle}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
       nodeBody.appendChild(tr);
     });
 
@@ -262,6 +262,17 @@
       const idx = Number(e.target.dataset.itemIndex);
       currentNodes[idx].item = e.target.value.trim() || currentNodes[idx].item;
       renderInsertOptions();
+      render();
+    }));
+    document.querySelectorAll('input[data-days-index]').forEach(input => input.addEventListener('change', e => {
+      const idx = Number(e.target.dataset.daysIndex);
+      const val = Number(e.target.value);
+      if (Number.isNaN(val) || val < 0) {
+        alert('节点要求（天）无效');
+        render();
+        return;
+      }
+      currentNodes[idx].days = val;
       render();
     }));
   }
