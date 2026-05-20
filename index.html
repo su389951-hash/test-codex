@@ -138,6 +138,7 @@
   let owners = [];
   let nodeStartDates = [];
   let lastGlobalStartDate = null;
+  let currentPart = null;
 
   function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
   function toDateInputValue(date) {
@@ -173,6 +174,7 @@
   }
 
   function loadPart(part) {
+    currentPart = part;
     initPartState(part);
     const data = partDataMap[part];
     projectTypeEl.value = data.projectType;
@@ -186,8 +188,8 @@
     render();
   }
 
-  function saveCurrentPartState() {
-    const part = partSelectEl.value;
+  function saveCurrentPartState(partOverride) {
+    const part = partOverride || currentPart || partSelectEl.value;
     partDataMap[part] = {
       projectType: projectTypeEl.value,
       startDate: startDateEl.value,
@@ -249,7 +251,10 @@
   loadPart(partNumbers[0]);
 
   document.getElementById('refreshBtn').addEventListener('click', render);
-  document.getElementById('saveBtn').addEventListener('click', () => { saveCurrentPartState(); alert('当前零件数据已独立保存'); });
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    saveCurrentPartState(currentPart);
+    alert(`零件号 ${currentPart} 数据已独立保存`);
+  });
 
   projectTypeEl.addEventListener('change', render);
   startDateEl.addEventListener('change', () => {
@@ -261,12 +266,17 @@
     render();
   });
 
-  partSelectEl.addEventListener('change', () => { saveCurrentPartState(); loadPart(partSelectEl.value); });
+  partSelectEl.addEventListener('change', () => {
+    const targetPart = partSelectEl.value;
+    const previousPart = currentPart;
+    if (previousPart) saveCurrentPartState(previousPart);
+    loadPart(targetPart);
+  });
 
   document.getElementById('addPartBtn').addEventListener('click', () => {
     const val = document.getElementById('newPartInput').value.trim(); if (!val) return;
     if (partNumbers.includes(val)) return alert('零件号已存在');
-    saveCurrentPartState();
+    if (currentPart) saveCurrentPartState(currentPart);
     partNumbers.push(val); initPartState(val); renderPartOptions(val); loadPart(val); document.getElementById('newPartInput').value='';
   });
   document.getElementById('deletePartBtn').addEventListener('click', () => {
