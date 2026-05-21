@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>新品开发与变更管理程序</title>
+  <style>
+    :root { --ok:#16a34a; --inprogress:#f59e0b; --warn:#dc2626; --bg:#f6f8fb; --card:#fff; --text:#0f172a; --line:#d8dee8; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif; background:var(--bg); color:var(--text); }
+    .container { max-width:1280px; margin:24px auto; padding:0 16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(15,23,42,.05); margin-bottom:16px; }
+    h1 { margin:0 0 12px; font-size:24px; }
+    .controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; align-items:end; }
+    .inline-row { display:flex; gap:8px; }
+    label { display:block; font-size:13px; margin-bottom:6px; color:#334155; }
+    select,input,button { width:100%; height:38px; border:1px solid #cbd5e1; border-radius:8px; padding:0 10px; font-size:14px; background:#fff; }
+    button { cursor:pointer; font-weight:600; background:#2563eb; color:#fff; border:none; }
+    button:hover { background:#1d4ed8; }
+    button.danger { background:#dc2626; }
+    button.danger:hover { background:#b91c1c; }
+    button.save { background:#0f766e; }
+    button.save:hover { background:#0d5f59; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { border:1px solid var(--line); padding:8px; text-align:center; }
+    th { background:#f1f5f9; }
+    td.left { text-align:left; }
+    .light { width:14px; height:14px; border-radius:50%; margin:0 auto; background:var(--ok); box-shadow:0 0 0 3px rgba(22,163,74,.15); }
+    .light.progress { background:var(--inprogress); box-shadow:0 0 0 3px rgba(245,158,11,.25); }
+    .light.done { background:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.2); }
+    .light.warn { background:var(--warn); box-shadow:0 0 0 3px rgba(220,38,38,.2); }
+    .summary { display:flex; gap:16px; flex-wrap:wrap; align-items:center; font-size:14px; }
+    .pill { padding:6px 10px; border-radius:999px; font-weight:600; border:1px solid transparent; }
+    .pill.ok { color:#166534; background:#dcfce7; border-color:#86efac; }
+    .pill.warn { color:#7f1d1d; background:#fee2e2; border-color:#fca5a5; }
+    .tips { font-size:13px; color:#475569; line-height:1.6; }
+    .tool-cell { display:flex; gap:6px; justify-content:center; }
+    .tool-cell button { height:30px; width:auto; padding:0 8px; }
+    th { resize: horizontal; overflow: auto; white-space: nowrap; }
+    td input[type="number"], td input[type="text"], td input[type="date"] { width: 100%; }
+    .ref-days { color:#64748b; font-size:12px; display:block; margin-top:2px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h1>新品开发与变更管理程序</h1>
+    <div class="controls">
+      <div>
+        <label>项目类型（可下拉选择）</label>
+        <select id="projectType"><option value="新品开发">新品开发</option><option value="变更管理">变更管理</option></select>
+      </div>
+      <div>
+        <label>零件号（可新增/删除）</label>
+        <div class="inline-row">
+          <select id="partSelect"></select>
+          <button type="button" id="deletePartBtn" class="danger">删除</button>
+        </div>
+      </div>
+      <div>
+        <label>新增零件号</label>
+        <div class="inline-row">
+          <input id="newPartInput" type="text" placeholder="例如：PN-2026-001" />
+          <button type="button" id="addPartBtn">新增</button>
+        </div>
+      </div>
+      <div>
+        <label>任务接收日期</label>
+        <input type="date" id="startDate" />
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <div class="inline-row">
+          <button id="refreshBtn">刷新超期状态</button>
+          <button id="saveBtn" class="save" type="button">保存当前零件</button>
+          <button id="resetPresetBtn" type="button">恢复起始点预设</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>新增项目节点（可插入到中间）</label>
+    <div class="controls">
+      <input id="newItem" placeholder="项目名称" />
+      <input id="newStartPoint" placeholder="起始点" value="接到任务" />
+      <input id="newDays" type="number" step="0.5" min="0" value="1" />
+      <div class="inline-row">
+        <select id="ownerSelect"></select>
+        <button type="button" id="deleteOwnerBtn" class="danger">删除</button>
+      </div>
+      <select id="insertAfter"><option value="end">插入到末尾</option></select>
+      <button id="addNodeBtn" type="button">新增项目节点</button>
+      <input id="newOwnerInput" placeholder="新增工程师姓名" />
+      <button id="addOwnerBtn" type="button">新增工程师</button>
+    </div>
+  </div>
+
+  <div class="card"><div class="summary" id="summary"></div></div>
+
+  <div class="card tips">
+    <strong>亮灯说明：</strong>
+    <ul>
+      <li><span class="light" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>绿灯：未开始（当前日期早于节点起始日期）。</li>
+      <li><span class="light progress" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>黄灯：节点期限之内，正在进行中（当前日期在起始日期与计划完成日期之间）。</li>
+      <li><span class="light warn" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>红灯：已超期（当前日期晚于计划完成日期）。</li>
+      <li><span class="light done" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>蓝灯：已完成（无论是否超期，完成后显示已完成状态）。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <table id="mainTable">
+      <colgroup>
+        <col style="width:70px" /><col style="width:220px" /><col style="width:270px" /><col style="width:190px" /><col style="width:140px" /><col style="width:140px" /><col style="width:110px" /><col style="width:90px" /><col style="width:120px" />
+      </colgroup>
+      <thead>
+      <tr><th>序号</th><th>项目</th><th>起始点（说明/日期）</th><th>节点要求（天）<br/><small>参考值保留</small></th><th>责任人</th><th>计划完成</th><th>是否完成</th><th>状态灯</th><th>操作</th></tr>
+      </thead>
+      <tbody id="nodeBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const defaultNodes = [
+    { item:'新品评审', startPoint:'接到信息', days:2, refDays:2, owner:'项目工程师', completed:'否' },
+    { item:'变更评审', startPoint:'接到信息', days:2, refDays:2, owner:'项目工程师', completed:'否' },
+    { item:'PLM任务创建', startPoint:'接到任务', days:1, refDays:1, owner:'王梦', completed:'否' },
+    { item:'新品报价', startPoint:'评审完成', days:2, refDays:2, owner:'项目工程师', completed:'否' },
+    { item:'技术通知', startPoint:'评审完成', days:2, refDays:2, owner:'项目工程师', completed:'否' },
+    { item:'进度计划下发', startPoint:'接到开发通知', days:2, refDays:2, owner:'项目工程师', completed:'否' },
+    { item:'图纸转化', startPoint:'接到开发通知', days:3, refDays:3, owner:'项目工程师', completed:'否' },
+    { item:'模具鉴定', startPoint:'模具到厂', days:3, refDays:3, owner:'项目工程师', completed:'否' },
+    { item:'工艺下发', startPoint:'模具到厂', days:2, refDays:2, owner:'项目工程师', completed:'否' },
+    { item:'材料试验（物性）', startPoint:'接到任务', days:2, refDays:2, owner:'寿子启', completed:'否' },
+    { item:'产品试验', startPoint:'接到任务', days:1, refDays:1, owner:'张倩', completed:'否' },
+    { item:'BOM创建', startPoint:'接到任务', days:1, refDays:1, owner:'郭鑫', completed:'否' },
+    { item:'产品检验卡', startPoint:'接到开发通知', days:5, refDays:5, owner:'项目工程师', completed:'否' },
+    { item:'骨架检验卡', startPoint:'接到开发通知', days:5, refDays:5, owner:'项目工程师', completed:'否' },
+    { item:'文件提交', startPoint:'接到任务', days:7, refDays:7, owner:'项目工程师', completed:'否' },
+    { item:'质量问题处理', startPoint:'接到任务', days:0.5, refDays:0.5, owner:'项目工程师', completed:'否' }
+  ];
+  const projectAdjust = { '新品开发': 1, '变更管理': 0.8 };
+
+  let partNumbers = ['PN-2026-001', 'PN-2026-002'];
+  let partDataMap = {};
+
+  const nodeBody = document.getElementById('nodeBody');
+  const summary = document.getElementById('summary');
+  const projectTypeEl = document.getElementById('projectType');
+  const startDateEl = document.getElementById('startDate');
+  const partSelectEl = document.getElementById('partSelect');
+  const insertAfterEl = document.getElementById('insertAfter');
+  const ownerSelectEl = document.getElementById('ownerSelect');
+
+  let currentNodes = [];
+  let owners = [];
+  let nodeStartDates = [];
+  let manualStartFlags = [];
+  let lastGlobalStartDate = null;
+  let currentPart = null;
+
+  function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+  function toDateInputValue(date) {
+    const d = new Date(date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function addDays(date, days) {
+    const result = new Date(date); result.setDate(result.getDate()+Math.floor(days));
+    if (days % 1 !== 0) result.setHours(result.getHours() + (days % 1) * 24); return result;
+  }
+  function fmt(date) { return date.toLocaleDateString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit' }); }
+  function shiftDateValue(dateStr, deltaMs) { return toDateInputValue(new Date(new Date(dateStr+'T09:00:00').getTime()+deltaMs)); }
+
+  function buildDefaultStartDates(baseDate, nodes) {
+    const dates = [];
+    nodes.forEach((_, i) => {
+      if (i === 0) dates.push(toDateInputValue(baseDate));
+      else dates.push(toDateInputValue(addDays(new Date(dates[i-1]+'T09:00:00'), Number(nodes[i-1].days)||0)));
+    });
+    return dates;
+  }
+
+  function initPartState(part) {
+    if (partDataMap[part]) return;
+    const base = new Date(startDateEl.value + 'T09:00:00');
+    const nodes = clone(defaultNodes);
+    partDataMap[part] = {
+      projectType: '新品开发',
+      startDate: toDateInputValue(base),
+      nodes,
+      owners: [...new Set(nodes.map(n => n.owner))],
+      nodeStartDates: buildDefaultStartDates(base, nodes),
+      manualStartFlags: Array(nodes.length).fill(false)
+    };
+  }
+
+  function loadPart(part) {
+    currentPart = part;
+    initPartState(part);
+    const data = partDataMap[part];
+    projectTypeEl.value = data.projectType;
+    startDateEl.value = data.startDate;
+    currentNodes = clone(data.nodes);
+    owners = [...data.owners];
+    nodeStartDates = [...data.nodeStartDates];
+    manualStartFlags = data.manualStartFlags ? [...data.manualStartFlags] : Array(currentNodes.length).fill(false);
+    lastGlobalStartDate = new Date(data.startDate + 'T09:00:00');
+    // 默认由程序自动计算预设起始点；后续用户可逐条手动修改
+    recalcStartDatesFrom(0);
+    renderOwnerOptions(owners[0]);
+    renderInsertOptions();
+    render();
+  }
+
+  function saveCurrentPartState(partOverride) {
+    const part = partOverride || currentPart || partSelectEl.value;
+    partDataMap[part] = {
+      projectType: projectTypeEl.value,
+      startDate: startDateEl.value,
+      nodes: clone(currentNodes),
+      owners: [...owners],
+      nodeStartDates: [...nodeStartDates],
+      manualStartFlags: [...manualStartFlags]
+    };
+  }
+
+  function renderPartOptions(selected) {
+    partSelectEl.innerHTML = '';
+    partNumbers.forEach(p => {
+      const op = document.createElement('option'); op.value = p; op.textContent = p; partSelectEl.appendChild(op);
+    });
+    if (selected && partNumbers.includes(selected)) partSelectEl.value = selected;
+  }
+  function renderOwnerOptions(selected) {
+    ownerSelectEl.innerHTML = '';
+    owners.forEach(o => { const op = document.createElement('option'); op.value = o; op.textContent = o; ownerSelectEl.appendChild(op); });
+    if (selected && owners.includes(selected)) ownerSelectEl.value = selected;
+  }
+  function renderInsertOptions() {
+    const selected = insertAfterEl.value || 'end';
+    insertAfterEl.innerHTML = '<option value="end">插入到末尾</option>';
+    currentNodes.forEach((n, i) => {
+      const op = document.createElement('option'); op.value = String(i); op.textContent = `插入到第 ${i + 1} 项后（${n.item}）`; insertAfterEl.appendChild(op);
+    });
+    insertAfterEl.value = (selected === 'end' || currentNodes[selected]) ? selected : 'end';
+  }
+
+
+  function applyAutoPresetStartDates() {
+    manualStartFlags = Array(currentNodes.length).fill(false);
+    if (currentNodes.length) {
+      nodeStartDates = Array(currentNodes.length).fill(startDateEl.value);
+      recalcStartDatesFrom(0);
+    }
+  }
+
+  function recalcStartDatesFrom(startIdx) {
+    if (!currentNodes.length) return;
+    if (!nodeStartDates.length) nodeStartDates = Array(currentNodes.length).fill(startDateEl.value);
+
+    const begin = Math.max(0, startIdx);
+    if (begin === 0) nodeStartDates[0] = nodeStartDates[0] || startDateEl.value;
+
+    const planIndex = currentNodes.findIndex(n => n.item === '进度计划下发');
+    const planStart = planIndex >= 0 ? nodeStartDates[planIndex] : null;
+    const moldArrivalDate = planStart ? toDateInputValue(addDays(new Date(planStart + 'T09:00:00'), 20)) : null;
+    const inspectDate = planStart ? toDateInputValue(addDays(new Date(planStart + 'T09:00:00'), 7)) : null;
+
+    for (let i = Math.max(1, begin); i < currentNodes.length; i++) {
+      if (manualStartFlags[i]) continue;
+      if ((currentNodes[i].item === '产品检验卡' || currentNodes[i].item === '骨架检验卡') && inspectDate) {
+        nodeStartDates[i] = inspectDate;
+      } else if (currentNodes[i].item === '工艺下发' && moldArrivalDate) {
+        nodeStartDates[i] = toDateInputValue(addDays(new Date(moldArrivalDate + 'T09:00:00'), 5));
+      } else if (currentNodes[i].startPoint === '模具到厂' && moldArrivalDate) {
+        nodeStartDates[i] = moldArrivalDate;
+      } else {
+        const prevStart = nodeStartDates[i - 1] || startDateEl.value;
+        const prevDays = Number(currentNodes[i - 1].days) || 0;
+        nodeStartDates[i] = toDateInputValue(addDays(new Date(prevStart + 'T09:00:00'), prevDays));
+      }
+    }
+  }
+
+  function removeNode(index) { currentNodes.splice(index,1); nodeStartDates.splice(index,1); manualStartFlags.splice(index,1); if (currentNodes.length && nodeStartDates.length) recalcStartDatesFrom(Math.max(0, index - 1)); renderInsertOptions(); render(); }
+
+  function render() {
+    const factor = projectAdjust[projectTypeEl.value] || 1;
+    const now = new Date();
+    nodeBody.innerHTML = '';
+    let overdueCount = 0;
+
+    const nodes = currentNodes.map((n,i)=>({ no:i+1, ...n, completed:n.completed || '否', refDays:n.refDays ?? n.days, days:+(n.days*factor).toFixed(1) }));
+    nodes.forEach((n, i) => {
+      const startStr = nodeStartDates[i] || startDateEl.value;
+      const deadline = addDays(new Date(startStr + 'T09:00:00'), n.days);
+      const rowStart = new Date(startStr + 'T09:00:00');
+      const overdue = now > deadline;
+      const inProgress = now >= rowStart && now <= deadline;
+      const isDone = n.completed === '是';
+      if (overdue && !isDone) overdueCount++;
+      const lightClass = isDone ? 'done' : (overdue ? 'warn' : (inProgress ? 'progress' : ''));
+      const lightTitle = isDone ? '已完成' : (overdue ? '已超期' : (inProgress ? '进行中（期限内）' : '未开始'));
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${n.no}</td><td class="left"><input type="text" data-item-index="${i}" value="${n.item}" /></td><td class="left">${n.startPoint}<br/><input type="date" data-start-index="${i}" value="${startStr}" /></td><td><input type="number" min="0" step="0.5" data-days-index="${i}" value="${currentNodes[i].days}" /><span class="ref-days">参考：${n.refDays}天</span></td><td><select data-owner-index="${i}">${owners.map(o => `<option value="${o}" ${o===n.owner?"selected":""}>${o}</option>`).join("")}</select></td><td>${fmt(deadline)}</td><td><select data-completed-index="${i}"><option value="否" ${n.completed==='否'?'selected':''}>否</option><option value="是" ${n.completed==='是'?'selected':''}>是</option></select></td><td><div class="light ${lightClass}" title="${lightTitle}"></div></td><td class="tool-cell"><button class="danger" data-index="${i}" type="button">删除项目</button></td>`;
+      nodeBody.appendChild(tr);
+    });
+
+    const allOk = overdueCount === 0;
+    summary.innerHTML = `<span class="pill ${allOk?'ok':'warn'}">${projectTypeEl.value}：${allOk?'全部节点正常':`存在 ${overdueCount} 个超期节点`}</span><span>零件号：${partSelectEl.value}</span><span>开始日期：${fmt(new Date(startDateEl.value+'T09:00:00'))}</span><span>当前日期：${fmt(now)}</span><span>节点总数：${nodes.length}</span>`;
+
+    document.querySelectorAll('.tool-cell button').forEach(btn => btn.addEventListener('click', e => removeNode(Number(e.target.dataset.index))));
+    document.querySelectorAll('input[data-start-index]').forEach(input => input.addEventListener('change', e => { const idx = Number(e.target.dataset.startIndex); nodeStartDates[idx] = e.target.value; manualStartFlags[idx] = true; recalcStartDatesFrom(idx); render(); }));
+    document.querySelectorAll('input[data-item-index]').forEach(input => input.addEventListener('change', e => {
+      const idx = Number(e.target.dataset.itemIndex);
+      currentNodes[idx].item = e.target.value.trim() || currentNodes[idx].item;
+      renderInsertOptions();
+      render();
+    }));
+    document.querySelectorAll('input[data-days-index]').forEach(input => input.addEventListener('change', e => {
+      const idx = Number(e.target.dataset.daysIndex);
+      const val = Number(e.target.value);
+      if (Number.isNaN(val) || val < 0) {
+        alert('节点要求（天）无效');
+        render();
+        return;
+      }
+      currentNodes[idx].days = val;
+      recalcStartDatesFrom(idx);
+      render();
+    }));
+    document.querySelectorAll('select[data-owner-index]').forEach(sel => sel.addEventListener('change', e => {
+      const idx = Number(e.target.dataset.ownerIndex);
+      currentNodes[idx].owner = e.target.value;
+      render();
+    }));
+    document.querySelectorAll('select[data-completed-index]').forEach(sel => sel.addEventListener('change', e => {
+      const idx = Number(e.target.dataset.completedIndex);
+      currentNodes[idx].completed = e.target.value;
+      render();
+    }));
+  }
+
+  startDateEl.value = toDateInputValue(new Date());
+  partNumbers.forEach(initPartState);
+  renderPartOptions(partNumbers[0]);
+  loadPart(partNumbers[0]);
+
+  document.getElementById('refreshBtn').addEventListener('click', render);
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    saveCurrentPartState(currentPart);
+    alert(`零件号 ${currentPart} 数据已独立保存`);
+  });
+  document.getElementById('resetPresetBtn').addEventListener('click', () => {
+    applyAutoPresetStartDates();
+    render();
+    alert('已恢复该零件所有起始点为程序预设时间');
+  });
+
+  projectTypeEl.addEventListener('change', render);
+  startDateEl.addEventListener('change', () => {
+    const newBase = new Date(startDateEl.value + 'T09:00:00');
+    if (!lastGlobalStartDate) { lastGlobalStartDate = newBase; render(); return; }
+    const deltaMs = newBase.getTime() - lastGlobalStartDate.getTime();
+    nodeStartDates = nodeStartDates.map(d => shiftDateValue(d, deltaMs));
+    recalcStartDatesFrom(0);
+    lastGlobalStartDate = newBase;
+    render();
+  });
+
+  partSelectEl.addEventListener('change', () => {
+    const targetPart = partSelectEl.value;
+    const previousPart = currentPart;
+    if (previousPart) saveCurrentPartState(previousPart);
+    loadPart(targetPart);
+  });
+
+  document.getElementById('addPartBtn').addEventListener('click', () => {
+    const val = document.getElementById('newPartInput').value.trim(); if (!val) return;
+    if (partNumbers.includes(val)) return alert('零件号已存在');
+    if (currentPart) saveCurrentPartState(currentPart);
+    partNumbers.push(val); initPartState(val); renderPartOptions(val); loadPart(val); document.getElementById('newPartInput').value='';
+  });
+  document.getElementById('deletePartBtn').addEventListener('click', () => {
+    if (partNumbers.length <= 1) return alert('至少保留一个零件号');
+    const cur = partSelectEl.value; delete partDataMap[cur]; partNumbers = partNumbers.filter(p => p !== cur);
+    renderPartOptions(partNumbers[0]); loadPart(partNumbers[0]);
+  });
+
+  document.getElementById('addOwnerBtn').addEventListener('click', () => {
+    const v = document.getElementById('newOwnerInput').value.trim(); if (!v) return;
+    if (owners.includes(v)) return alert('工程师已存在'); owners.push(v); renderOwnerOptions(v); document.getElementById('newOwnerInput').value='';
+  });
+  document.getElementById('deleteOwnerBtn').addEventListener('click', () => {
+    if (owners.length <= 1) return alert('至少保留一个工程师');
+    const cur = ownerSelectEl.value; if (currentNodes.some(n => n.owner === cur)) return alert('该工程师已被节点使用，请先修改或删除相关节点');
+    owners = owners.filter(o => o !== cur); renderOwnerOptions(owners[0]);
+  });
+
+  document.getElementById('addNodeBtn').addEventListener('click', () => {
+    const item = document.getElementById('newItem').value.trim(); if (!item) return alert('请输入项目名称');
+    const startPoint = document.getElementById('newStartPoint').value.trim() || '接到任务';
+    const days = Number(document.getElementById('newDays').value); if (Number.isNaN(days) || days < 0) return alert('节点天数无效');
+    const owner = ownerSelectEl.value || '项目工程师';
+    const newNode = { item, startPoint, days, refDays: days, owner, completed:'否' };
+    const pos = insertAfterEl.value;
+    if (pos === 'end') { currentNodes.push(newNode); manualStartFlags.push(false); nodeStartDates.push(nodeStartDates[nodeStartDates.length - 1] || startDateEl.value); }
+    else { const idx = Number(pos); currentNodes.splice(idx+1,0,newNode); nodeStartDates.splice(idx+1,0,nodeStartDates[idx] || startDateEl.value); manualStartFlags.splice(idx+1,0,false); }
+    recalcStartDatesFrom(0);
+    renderInsertOptions(); document.getElementById('newItem').value=''; render();
+  });
+</script>
+</body>
+</html>
